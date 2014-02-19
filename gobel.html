@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  background: #000000;
+}
+
+.mytext {
+        font:small-caps bold 30px georgia;
+        color:#FFFFFF;
+        text-align: center;
+        margin-top: 0px;
+        padding-top: 0px;
+        float:left;
+        padding: 20px;
+    padding-top: 400px ;
+        position: absolute;
+}
+
+</style>
+<div class="error"></div>
+
+                  <content>
+
+
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script src="//d3js.org/queue.v1.min.js"></script>
+<script>
+
+        window.onerror = function(error, url, line) {
+        document.writeln("<div> Error:"+error+" "+line+"</div>");
+      }
+</script>
+
+<script>
+
+
+var width = 400,
+    height = 400,
+    speed = -1e-2,
+    start = Date.now();
+
+var sphere = {type: "Sphere"};
+
+var projection = d3.geo.orthographic()
+    .scale(width / 2.1)
+    .clipAngle(90)
+    .translate([width / 2, height / 2]);
+
+var graticule = d3.geo.graticule();
+
+var canvas = d3.select("content").append("canvas")
+    .attr("width", width)
+    .attr("height", height);
+
+var context = canvas.node().getContext("2d");
+
+var path = d3.geo.path()
+    .projection(projection)
+    .context(context);
+
+//var topo;
+//d3.json("http://www.ernie.itpir.wm.edu/data/world.json", function(error, json) {
+//  topo = json;
+//});
+
+//var treaties
+//d3.tsv("", function(error));
+
+queue()
+    .defer(d3.json, "/data/world.json")
+    .defer(d3.tsv, "countryList.tsv")
+    .await(ready);
+
+
+
+function ready (error, topo, treaties) {
+  var land = topojson.feature(topo, topo.objects.land),
+      grid = graticule(),
+      countries = topojson.feature(topo, topo.objects.countries).features,
+      borders = topojson.mesh(topo, topo.objects.countries, function(a, b) { return a !== b; });
+
+
+
+  d3.timer(function() {
+    var λ = speed * (Date.now() - start),
+        φ = -15;
+
+    context.clearRect(0, 0, width, height);
+
+    context.beginPath();
+    path(sphere);
+    context.lineWidth = 3;
+    context.strokeStyle = "#000";
+    context.stroke();
+    context.fillStyle = "#fff";
+    context.fill();
+
+
+    context.save();
+    context.translate(width / 2, 0);
+    context.scale(-1, 1);
+    context.translate(-width / 2, 0);
+    projection.rotate([λ + 180, -φ]);
+
+    context.beginPath();
+    path(land);
+    context.fillStyle = "#dadac4";
+    context.fill();
+
+    context.beginPath();
+    path(grid);
+    context.lineWidth = .5;
+    context.strokeStyle = "rgba(119,119,119,.5)";
+    context.stroke();
+
+    context.restore();
+    projection.rotate([λ, φ]);
+
+    context.beginPath();
+    path(grid);
+    context.lineWidth = .5;
+    context.strokeStyle = "rgba(119,119,119,.5)";
+    context.stroke();
+
+    context.beginPath();
+    path(land);
+    context.fillStyle = "#737368";
+    context.fill();
+    context.lineWidth = .5;
+    context.strokeStyle = "#000";
+    context.stroke();
+
+
+          var c = context;
+
+   var i =32;
+    c.fillStyle = "#bbb", c.beginPath(), path(land), c.fill();
+      for(var t in treaties){
+            c.fillStyle = "rgb("+
+          Math.floor(0)+","+
+          Math.floor(0)+","+
+          Math.floor(treaties[t].Value*250)+")", c.beginPath(), path(getCountry(countries, treaties[t].id)), c.fill();
+      }
+
+
+    c.strokeStyle = "#fff", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
+    c.strokeStyle = "#000", c.lineWidth = 2, c.beginPath(), path(sphere), c.stroke();
+
+
+  });
+}
+
+function type(d) {
+  d.id = +d.id;
+    d.color = d.value ;
+  return d;
+}
+
+function getCountry(countries,id){
+    for(var i=0; i<countries.length; i++){
+        if(countries[i].id==id){
+            return countries[i];
+        }
+    }
+}
+
+
+
+
+d3.select(self.frameElement).style("height", height + "px");
+
+
+
+</script>
